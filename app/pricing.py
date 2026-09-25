@@ -124,3 +124,7 @@ async def poll_orders(bot: Bot):
             LOG.exception("OTP polling loop error")
 
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
+
+def sell_price(cost_rupees: float) -> float:
+    markup = RARE_MARKUP_RUPEES if cost_rupees <= RARE_COST_MAX_RUPEES else DEFAULT_MARKUP_RUPEES
+    return round(cost_rupees + markup, 2)
