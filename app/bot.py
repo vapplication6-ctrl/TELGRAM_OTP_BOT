@@ -145,9 +145,43 @@ async def service(c: CallbackQuery):
     items = await catalog(svc)
     if not items:
         return await c.answer("No numbers available.", show_alert=True)
-    rows = [[InlineKeyboardButton(text=f"{format_country(x.country, x.country_name)} • ₹{sell_price(x.cost_rupees):.0f}", callback_data=f"buy:{svc}:{x.country}")] for x in items[:80]]
+    rows = [[InlineKeyboardButton(text=f"{format_country(x.country, x.country_name)} • ₹{sell_price(x.cost_rupees):.0f}", callback_data=f"country:{svc}:{x.country}")] for x in items[:80]]
     rows.append([InlineKeyboardButton(text="◀️ Back", callback_data="menu:buy")])
     await c.message.edit_text("🌍 Select country:", reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+    await c.answer()
+
+@r.callback_query(F.data.startswith("country:"))
+async def country_detail(c: CallbackQuery):
+    _, svc, country = c.data.split(":", 2)
+    x = next((i for i in await catalog(svc) if i.country == country), None)
+    if not x:
+        return await c.answer("Country unavailable", show_alert=True)
+
+    price = sell_price(x.cost_rupees)
+    formatted = format_country(x.country, x.country_name)
+    # Keep the detail screen clean: country name + flag only.
+    if " • " in formatted:
+        country_name, meta = formatted.split(" • ", 1)
+        flag = meta[0] if meta else "🌍"
+        country_display = f"{country_name} {flag}"
+    else:
+        country_display = formatted
+
+    text = (
+        "<b>Click Buy to purchase an account:</b>\n"
+        "––––––––––––––––––•\n"
+        f"• Country: {country_display}\n"
+        f"• Price: ₹{price:.0f}\n"
+        "• Server: Server (1)\n"
+        f"• Stock: {x.available} qty"
+    )
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="◀️ Back", callback_data=f"svc:{svc}"),
+            InlineKeyboardButton(text="🛒 Buy", callback_data=f"buy:{svc}:{country}"),
+        ]
+    ])
+    await c.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
     await c.answer()
 
 @r.callback_query(F.data.startswith("buy:"))
