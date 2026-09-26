@@ -118,9 +118,10 @@ async def menu_history(c: CallbackQuery):
     else:
         lines = ["📋 History\n"]
         for o in orders:
-            status_icon = {"completed": "✅", "waiting": "⏳", "failed": "❌"}.get(o.status, "•")
+            status_icon = {"completed": "✅", "waiting": "⏳", "failed": "❌", "refunded": "💸"}.get(o.status, "•")
             otp = f"\n🔐 OTP: <code>{o.otp}</code>" if o.otp else ""
-            lines.append(f"<b>#{o.id}</b> • {o.service} • {o.country}\n📱 <code>{o.phone}</code>\n{status_icon} {o.status}{otp}\n")
+            display_status = "refunded" if o.status == "refunded" else o.status
+            lines.append(f"<b>#{o.id}</b> • {o.service} • {o.country}\n📱 <code>{o.phone}</code>\n{status_icon} {display_status}{otp}\n")
         text = "\n".join(lines)
     await c.message.edit_text(text, parse_mode="HTML", reply_markup=back_keyboard())
     await c.answer()
