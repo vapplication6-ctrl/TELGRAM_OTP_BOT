@@ -18,3 +18,6 @@ VRNUM_API_KEY = os.getenv("VRNUM_API_KEY", "")
 DEFAULT_MARKUP_RUPEES = float(os.getenv("DEFAULT_MARKUP_RUPEES", "15"))
 RARE_MARKUP_RUPEES = float(os.getenv("RARE_MARKUP_RUPEES", "30"))
 RARE_COST_MAX_RUPEES = float(os.getenv("RARE_COST_MAX_RUPEES", "6"))
+
+# Waiting order auto-expires after this many minutes (refund + try cancel)
+ORDER_TIMEOUT_MINUTES = int(os.getenv("ORDER_TIMEOUT_MINUTES", "20"))
