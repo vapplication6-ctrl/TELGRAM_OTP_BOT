@@ -974,21 +974,54 @@ def _norm(value: str) -> str:
 def _flag(iso2: str) -> str:
     return ''.join(chr(ord(ch) + 127397) for ch in iso2.upper())
 
+# Reverse dial-code map (only unique dial codes to avoid wrong guesses)
+_DIAL_TO_ISO = {}
+for _iso, (_dial, _name) in COUNTRY_META.items():
+    if not _dial:
+        continue
+    if _dial not in _DIAL_TO_ISO:
+        _DIAL_TO_ISO[_dial] = _iso
+    else:
+        # Ambiguous dial code (shared by multiple countries) — do not auto-map
+        _DIAL_TO_ISO[_dial] = None
+
 def format_country(country_code: str, country_name: str) -> str:
+    """Return a nice label for Telegram buttons: Name + flag + dial if possible."""
     code = str(country_code or "").strip()
-    name = str(country_name or code).strip()
-    iso2 = code.upper() if len(code) == 2 and code.isalpha() and code.upper() in COUNTRY_META else ""
+    name = str(country_name or "").strip()
+    if not name or name == code:
+        name = code
+
+    iso2 = ""
+    # 1) Direct ISO2
+    if len(code) == 2 and code.isalpha() and code.upper() in COUNTRY_META:
+        iso2 = code.upper()
+    # 2) ISO3
     if not iso2 and len(code) == 3 and code.isalpha():
         iso2 = COUNTRY_ALPHA3.get(code.upper(), "")
+    # 3) Name aliases
     key = _norm(name)
     if not iso2:
         iso2 = COUNTRY_ALIASES.get(key, "")
-    if not iso2 and key in COUNTRY_META:
+    if not iso2 and key.upper() in COUNTRY_META:
         iso2 = key.upper()
-    if not iso2:
-        # Last chance: compare the provider code to a known dial code only when
-        # the country name cannot be resolved. Shared dial codes are ambiguous,
-        # so we intentionally do not guess from the dial code alone.
-        return name
-    dial = COUNTRY_META[iso2][0]
-    return f"{name} • {_flag(iso2)}{iso2}+{dial}"
+    # 4) Numeric / dial code (only if unique)
+    if not iso2 and code.isdigit():
+        mapped = _DIAL_TO_ISO.get(code)
+        if mapped:
+            iso2 = mapped
+            # Prefer proper country name from our table
+            name = COUNTRY_META[iso2][1]
+
+    if iso2 and iso2 in COUNTRY_META:
+        dial = COUNTRY_META[iso2][0]
+        nice_name = COUNTRY_META[iso2][1]
+        # Prefer our clean name if provider name looks like a number
+        if name.isdigit() or not name:
+            name = nice_name
+        return f"{name} • {_flag(iso2)}{iso2}+{dial}"
+
+    # Fallback: still show something readable instead of bare number
+    if code.isdigit():
+        return f"Country {code}"
+    return name or code
